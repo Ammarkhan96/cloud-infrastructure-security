@@ -1,3 +1,30 @@
+terraform {
+  required_version = ">= 1.6.0"
+
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0"
+    }
+  }
+}
+
+provider "aws" {
+  region = var.aws_region
+}
+
+variable "aws_region" {
+  description = "AWS region"
+  type        = string
+  default     = "eu-north-1"
+}
+
+variable "bucket_name" {
+  description = "S3 bucket name"
+  type        = string
+  default     = "ammar-devsecops-secure-bucket-2026"
+}
+
 # =========================================================
 # VPC
 # =========================================================
@@ -12,7 +39,6 @@ resource "aws_vpc" "security_demo_vpc" {
   }
 }
 
-
 # =========================================================
 # SECURE S3 BUCKET
 # =========================================================
@@ -26,11 +52,6 @@ resource "aws_s3_bucket" "secure_bucket" {
   }
 }
 
-
-# ---------------------------------------------------------
-# S3 PUBLIC ACCESS BLOCK
-# ---------------------------------------------------------
-
 resource "aws_s3_bucket_public_access_block" "secure_bucket_public_access" {
   bucket = aws_s3_bucket.secure_bucket.id
 
@@ -39,11 +60,6 @@ resource "aws_s3_bucket_public_access_block" "secure_bucket_public_access" {
   ignore_public_acls      = true
   restrict_public_buckets = true
 }
-
-
-# ---------------------------------------------------------
-# S3 ENCRYPTION
-# ---------------------------------------------------------
 
 resource "aws_s3_bucket_server_side_encryption_configuration" "secure_bucket_encryption" {
   bucket = aws_s3_bucket.secure_bucket.id
@@ -55,11 +71,6 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "secure_bucket_enc
   }
 }
 
-
-# ---------------------------------------------------------
-# S3 VERSIONING
-# ---------------------------------------------------------
-
 resource "aws_s3_bucket_versioning" "secure_bucket_versioning" {
   bucket = aws_s3_bucket.secure_bucket.id
 
@@ -67,11 +78,6 @@ resource "aws_s3_bucket_versioning" "secure_bucket_versioning" {
     status = "Enabled"
   }
 }
-
-
-# ---------------------------------------------------------
-# S3 LIFECYCLE
-# ---------------------------------------------------------
 
 resource "aws_s3_bucket_lifecycle_configuration" "secure_bucket_lifecycle" {
   bucket = aws_s3_bucket.secure_bucket.id
@@ -88,7 +94,6 @@ resource "aws_s3_bucket_lifecycle_configuration" "secure_bucket_lifecycle" {
   }
 }
 
-
 # =========================================================
 # SECURE SECURITY GROUP
 # =========================================================
@@ -98,9 +103,6 @@ resource "aws_security_group" "secure_sg" {
   description = "Secure security group with restricted inbound and outbound traffic"
   vpc_id      = aws_vpc.security_demo_vpc.id
 
-  # No inbound traffic by default
-
-  # Allow HTTPS outbound traffic
   egress {
     description = "Allow HTTPS outbound traffic"
     from_port   = 443
@@ -113,7 +115,6 @@ resource "aws_security_group" "secure_sg" {
     Name = "secure-security-group"
   }
 }
-
 
 # =========================================================
 # VPC FLOW LOGS
@@ -128,35 +129,22 @@ resource "aws_cloudwatch_log_group" "vpc_flow_logs" {
   }
 }
 
-
-# ---------------------------------------------------------
-# IAM ROLE FOR VPC FLOW LOGS
-# ---------------------------------------------------------
-
 resource "aws_iam_role" "flow_logs_role" {
   name = "security-demo-flow-logs-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
-
     Statement = [
       {
         Effect = "Allow"
-
         Principal = {
           Service = "vpc-flow-logs.amazonaws.com"
         }
-
         Action = "sts:AssumeRole"
       }
     ]
   })
 }
-
-
-# ---------------------------------------------------------
-# IAM POLICY FOR VPC FLOW LOGS
-# ---------------------------------------------------------
 
 resource "aws_iam_role_policy" "flow_logs_policy" {
   name = "security-demo-flow-logs-policy"
@@ -164,27 +152,19 @@ resource "aws_iam_role_policy" "flow_logs_policy" {
 
   policy = jsonencode({
     Version = "2012-10-17"
-
     Statement = [
       {
         Effect = "Allow"
-
         Action = [
           "logs:CreateLogStream",
           "logs:DescribeLogStreams",
           "logs:PutLogEvents"
         ]
-
         Resource = "${aws_cloudwatch_log_group.vpc_flow_logs.arn}:*"
       }
     ]
   })
 }
-
-
-# ---------------------------------------------------------
-# ENABLE VPC FLOW LOGS
-# ---------------------------------------------------------
 
 resource "aws_flow_log" "security_demo_flow_log" {
   iam_role_arn    = aws_iam_role.flow_logs_role.arn
@@ -197,7 +177,6 @@ resource "aws_flow_log" "security_demo_flow_log" {
   }
 }
 
-
 # =========================================================
 # SECURE IAM ROLE
 # =========================================================
@@ -207,15 +186,12 @@ resource "aws_iam_role" "secure_role" {
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
-
     Statement = [
       {
         Effect = "Allow"
-
         Principal = {
           Service = "ec2.amazonaws.com"
         }
-
         Action = "sts:AssumeRole"
       }
     ]
@@ -226,38 +202,47 @@ resource "aws_iam_role" "secure_role" {
   }
 }
 
-
-# =========================================================
-# LEAST PRIVILEGE IAM POLICY
-# =========================================================
-
 resource "aws_iam_role_policy" "secure_policy" {
   name = "least-privilege-policy"
   role = aws_iam_role.secure_role.id
 
   policy = jsonencode({
     Version = "2012-10-17"
-
     Statement = [
       {
         Effect = "Allow"
-
         Action = [
           "s3:ListBucket"
         ]
-
         Resource = aws_s3_bucket.secure_bucket.arn
       },
       {
         Effect = "Allow"
-
         Action = [
           "s3:GetObject",
           "s3:PutObject"
         ]
-
         Resource = "${aws_s3_bucket.secure_bucket.arn}/*"
       }
     ]
   })
+}
+
+# =========================================================
+# OUTPUTS
+# =========================================================
+
+output "s3_bucket_name" {
+  description = "Secure S3 bucket name"
+  value       = aws_s3_bucket.secure_bucket.bucket
+}
+
+output "security_group_id" {
+  description = "Secure security group ID"
+  value       = aws_security_group.secure_sg.id
+}
+
+output "iam_role_name" {
+  description = "Secure IAM role name"
+  value       = aws_iam_role.secure_role.name
 }

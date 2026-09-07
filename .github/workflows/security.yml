@@ -20,52 +20,22 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-
-      # -------------------------------------------------------
-      # Checkout Repository
-      # -------------------------------------------------------
-
       - name: Checkout
         uses: actions/checkout@v4
-
-
-      # -------------------------------------------------------
-      # Setup Terraform
-      # -------------------------------------------------------
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.9.8
 
-
-      # -------------------------------------------------------
-      # Terraform Format Check
-      # -------------------------------------------------------
-
       - name: Terraform Format
         run: terraform fmt -check -recursive
-
-
-      # -------------------------------------------------------
-      # Terraform Init
-      # -------------------------------------------------------
 
       - name: Terraform Init
         run: terraform init -backend=false
 
-
-      # -------------------------------------------------------
-      # Terraform Validate
-      # -------------------------------------------------------
-
       - name: Terraform Validate
         run: terraform validate
-
-
-      # -------------------------------------------------------
-      # Checkov Security Scan
-      # -------------------------------------------------------
 
       - name: Checkov Scan
         uses: bridgecrewio/checkov-action@v12
@@ -84,42 +54,25 @@ jobs:
     name: Terraform Plan
     needs: security
 
-    # Plan only runs after a push to main
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
     runs-on: ubuntu-latest
 
     steps:
-
-      # -------------------------------------------------------
-      # Checkout Repository
-      # -------------------------------------------------------
-
       - name: Checkout
         uses: actions/checkout@v4
-
-
-      # -------------------------------------------------------
-      # Setup Terraform
-      # -------------------------------------------------------
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.9.8
 
-
-      # -------------------------------------------------------
-      # Terraform Init
-      # -------------------------------------------------------
-
       - name: Terraform Init
         run: terraform init -backend=false
 
-
-      # -------------------------------------------------------
-      # Terraform Plan
-      # -------------------------------------------------------
-
       - name: Terraform Plan
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: "eu-north-1"
         run: terraform plan
