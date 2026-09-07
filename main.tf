@@ -1,30 +1,3 @@
-terraform {
-  required_version = ">= 1.6.0"
-
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = "~> 5.0"
-    }
-  }
-}
-
-provider "aws" {
-  region = var.aws_region
-}
-
-variable "aws_region" {
-  description = "AWS region"
-  type        = string
-  default     = "eu-north-1"
-}
-
-variable "bucket_name" {
-  description = "S3 bucket name"
-  type        = string
-  default     = "ammar-devsecops-secure-bucket-2026"
-}
-
 # =========================================================
 # VPC
 # =========================================================
@@ -227,4 +200,3 @@ resource "aws_iam_role_policy" "secure_policy" {
     ]
   })
 }
-
